@@ -3,9 +3,9 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 
-// todo
-// https://youtu.be/KSh1WB92u0o?t=3869
-
+/* 
+  todo https://youtu.be/KSh1WB92u0o?t=4623
+*/
 require("dotenv").config();
 
 const app = express();
