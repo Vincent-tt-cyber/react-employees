@@ -15,7 +15,7 @@ CREATE TABLE `Employee` (
     `firstName` VARCHAR(191) NOT NULL,
     `lastName` VARCHAR(191) NOT NULL,
     `age` VARCHAR(191) NOT NULL,
-    `adress` VARCHAR(191) NOT NULL,
+    `address` VARCHAR(191) NOT NULL,
     `userId` INTEGER NOT NULL,
 
     PRIMARY KEY (`id`)

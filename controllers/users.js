@@ -3,88 +3,96 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Пожалуйста, заполните обязательные поля",
+      });
+    }
+    const user = await prisma.user.findFirst({
+      where: {
+        email,
+      },
+    });
 
-  if (!email || !password) {
-    return res.status(400).json({
-      message: "Пожалуйста, заполните обязательные поля",
+    const isPasswordCorrect =
+      user && (await bcrypt.compare(password, user.password));
+
+    const secret = process.env.JWT_SECRET;
+
+    if (user && isPasswordCorrect && secret) {
+      return res.status(200).json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        token: jwt.sign({ id: user.id }, secret, { expiresIn: "30d" }),
+      });
+    } else {
+      return res.status(400).json({
+        message: "Неверно введен логин или пароль",
+      });
+    }
+  } catch (error) {
+    res.status(400).json({
+      message: "Что-то пошло не так",
     });
   }
-  const user = await prisma.user.findFirst({
-    where: {
-      email,
-    },
-  });
-
-  const isPasswordCorrect =
-    user && (await bcrypt.compare(password, user.password));
-
-  const secret = process.env.JWT_SECRET;
-
-  if (user && isPasswordCorrect && secret) {
-    return res.status(200).json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      token: jwt.sign({ id: user.id }, secret, { expiresIn: "30d" }),
-    });
-  } else {
-    return res.status(400).json({
-      message: "Неверно введен логин или пароль",
-    });
-  }
-  res.send("login");
 };
-
 /* 
+
   @route POST /api/user/register
   @description 
 */
 const register = async (req, res) => {
-  const { email, password, name } = req.body;
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({
+        message: "Пожалуйста, заполните обязательные поля",
+      });
+    }
 
-  if (!email || !password || !name) {
-    return res.status(400).json({
-      message: "Пожалуйста, заполните обязательные поля",
+    const registeredUser = await prisma.user.findFirst({
+      where: {
+        email,
+      },
     });
-  }
 
-  const registeredUser = await prisma.user.findFirst({
-    where: {
-      email,
-    },
-  });
+    if (registeredUser) {
+      return res
+        .status(400)
+        .json({ message: "Пользователь с таким email уже существует" });
+    }
 
-  if (registeredUser) {
-    return res
-      .status(400)
-      .json({ message: "Пользователь с таким email уже существует" });
-  }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const user = await prisma.user.create({
-    data: {
-      email,
-      name,
-      password: hashedPassword,
-    },
-  });
-
-  const secret = process.env.JWT_SECRET;
-
-  if (user && secret) {
-    res.status(201).json({
-      id: user.id,
-      email: user.email,
-      name,
-      token: jwt.sign({ id: user.id }, secret, { expiresIn: "30d" }),
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+      },
     });
-  } else {
-    return res.status(400).json({
-      message: "Не удалось создать пользователя",
-    });
+
+    const secret = process.env.JWT_SECRET;
+
+    if (user && secret) {
+      res.status(201).json({
+        id: user.id,
+        email: user.email,
+        name,
+        token: jwt.sign({ id: user.id }, secret, { expiresIn: "30d" }),
+      });
+    } else {
+      return res.status(400).json({
+        message: "Не удалось создать пользователя",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(400).json("Что-то пошло не так");
   }
 };
 
